@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Gép: 127.0.0.1:3307
--- Létrehozás ideje: 2026. Okt 20. 10:24
+-- Létrehozás ideje: 2026. Okt 20. 10:19
 -- Kiszolgáló verziója: 10.4.28-MariaDB
 -- PHP verzió: 8.2.4
 
@@ -22,14 +22,14 @@ SET time_zone = "+00:00";
 --
 
 -- --------------------------------------------------------
-
+ 
 --
 -- Tábla szerkezet ehhez a táblához `kategoriak`
 --
 
 CREATE TABLE `kategoriak` (
   `id` int(11) NOT NULL,
-  `nev` varchar(50) DEFAULT NULL
+  `nev` varchar(50) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_hungarian_ci;
 
 --
@@ -49,11 +49,11 @@ INSERT INTO `kategoriak` (`id`, `nev`) VALUES
 
 CREATE TABLE `termekek` (
   `id` int(11) NOT NULL,
-  `kategoria_id` int(11) DEFAULT NULL,
+  `kategoria_id` int(11) NOT NULL,
   `nev` varchar(100) DEFAULT NULL,
   `ar` int(11) DEFAULT NULL,
   `keszlet` int(11) DEFAULT NULL,
-  `elerheto` double DEFAULT NULL
+  `elerheto` tinyint(1) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_hungarian_ci;
 
 --
@@ -62,14 +62,14 @@ CREATE TABLE `termekek` (
 
 INSERT INTO `termekek` (`id`, `kategoria_id`, `nev`, `ar`, `keszlet`, `elerheto`) VALUES
 (1, 1, 'Vezeték nélküli optikai egér', 4990, 25, 1),
-(2, 1, 'Mechanikus billenytűzet', 18500, 10, 1),
-(3, 1, 'USB-C töltőlábel 2m', 2490, 0, 0),
-(4, 2, 'Golyóstoll kék (10db-os)', 1200, 50, 1),
+(2, 1, 'Mechanikus billentyűzet', 18500, 10, 1),
+(3, 1, 'USB-C töltőkábel 2m', 2490, 0, 0),
+(4, 2, 'Golyóstoll kék (10 db-os)', 1200, 50, 1),
 (5, 2, 'A4 Másolópapír 500 lap', 2190, 120, 1),
-(6, 2, 'Füzes A5 vonalas', 450, 0, 0),
+(6, 2, 'Füzet A5 vonalas', 450, 0, 0),
 (7, 3, 'Kenyérpirító inox', 8990, 8, 1),
 (8, 3, 'Vízforraló 1.7L', 6490, 15, 1),
-(9, 3, 'Robotporszívó', 69900, 3, 1),
+(9, 3, 'Robotporszívó Smart', 69900, 3, 1),
 (10, 1, 'Gamer fejhallgató mikrofonnal', 12990, 0, 0);
 
 --
@@ -86,25 +86,21 @@ ALTER TABLE `kategoriak`
 -- A tábla indexei `termekek`
 --
 ALTER TABLE `termekek`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `kategoria_id` (`kategoria_id`);
 
 --
--- A kiírt táblák AUTO_INCREMENT értéke
+-- Megkötések a kiírt táblákhoz
 --
 
 --
--- AUTO_INCREMENT a táblához `kategoriak`
---
-ALTER TABLE `kategoriak`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
-
---
--- AUTO_INCREMENT a táblához `termekek`
+-- Megkötések a táblához `termekek`
 --
 ALTER TABLE `termekek`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  ADD CONSTRAINT `termekek_ibfk_1` FOREIGN KEY (`kategoria_id`) REFERENCES `kategoriak` (`id`);
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+
