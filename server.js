@@ -1,84 +1,172 @@
-const express = require('express');
-const mysql = require('mysql2/promise');
-require('dotenv').config();
-const cors = require('cors'); 
+const express = require("express");
+const mysql = require("mysql2");
+const cors = require("cors");
 
 const app = express();
+
+app.use(cors());
 app.use(express.json());
 
-// 1. Összes termék lekérése
+const db = mysql.createConnection({
+    host: "localhost",
+    port: 3307,
+    user: "root",
+    password: "",
+    database: "raktar_db"
+});
+
+db.connect((err) => {
+    if (err) {
+        console.log(err);
+        return;
+    }
+
+    console.log("MySQL kapcsolódva");
+});
+
+app.get("/", (req, res) => {
+    res.send("API működik");
+});
+
 app.get("/api/termekek", (req, res) => {
-    const data = db.prepare("SELECT * FROM termekek ORDER BY nev").all();
-    res.json(data);
+    db.query(
+        "SELECT * FROM termekek ORDER BY nev",
+        (err, result) => {
+            if (err) return res.status(500).json(err);
+            res.json(result);
+        }
+    );
 });
 
-// 2. Csak az elérhető termékek
 app.get("/api/termekek/elerheto", (req, res) => {
-    const data = db.prepare(
-        "SELECT id, kategoria_id, nev, keszlet, elerheto FROM termekek WHERE elerheto = 1"
-    ).all();
-
-    res.json(data);
+    db.query(
+        "SELECT id, kategoria_id, nev, keszlet, elerheto FROM termekek WHERE elerheto = 1",
+        (err, result) => {
+            if (err) return res.status(500).json(err);
+            res.json(result);
+        }
+    );
 });
 
-// 3. Keresés név alapján
-app.get("/api/termekek/kereses/:szoveg", (req, res) => {
-    const szoveg = `%${req.params.szoveg}%`;
-
-    const data = db.prepare(
-        "SELECT * FROM termekek WHERE nev LIKE %egér%"
-    ).all(szoveg);
-
-    res.json(data);
-});
-
-// 4. Statisztika
-app.get("/api/termekek/statisztika", (req, res) => {
-    const data = db.prepare(
-        "SELECT COUNT(*) AS termek_db, AVG(ar) AS atlag_ar, SUM(keszlet) AS ossz_keszlet FROM termekek"
-    ).get();
-
-    res.json(data);
-});
-
-// 5. Drága termékek (> 10 000 Ft)
 app.get("/api/termekek/dragak", (req, res) => {
-    const data = db.prepare(
-        "SELECT nev, ar FROM termekek WHERE ar > 10000"
-    ).all();
-
-    res.json(data);
+    db.query(
+        "SELECT nev, ar FROM termekek WHERE ar > 10000",
+        (err, result) => {
+            if (err) return res.status(500).json(err);
+            res.json(result);
+        }
+    );
 });
 
-// POST - Új termék felvétele
+app.get("/api/termekek/statisztika", (req, res) => {
+    db.query(
+        "SELECT COUNT(*) AS termek_db, AVG(ar) AS atlag_ar, SUM(keszlet) AS ossz_keszlet FROM termekek",
+        (err, result) => {
+            if (err) return res.status(500).json(err);
+            res.json(result[0]);
+        }
+    );
+});
+
+app.get("/api/termekek/kereses/:szoveg", (req, res) => {
+    db.query(
+        "SELECT * FROM termekek WHERE nev LIKE ?",
+        [`%${req.params.szoveg}%`],
+        (err, result) => {
+            if (err) return res.status(500).json(err);
+            res.json(result);
+        }
+    );
+});
+
 app.post("/api/termekek", (req, res) => {
-    const { kategoria_id, nev, keszlet, ar, elerheto } = req.body;
+    const { kategoria_id, nev, ar, keszlet, elerheto } = req.body;
 
-    const result = db.prepare(`
-        INSERT INTO termekek (kategoria_id, nev, keszlet, ar, elerheto)
-        VALUES (?, ?, ?, ?, ?)
-    `).run(kategoria_id, nev, keszlet, ar, elerheto);
+    db.query(
+        "INSERT INTO termekek(kategoria_id, nev, ar, keszlet, elerheto) VALUES (?, ?, ?, ?, ?)",
+        [kategoria_id, nev, ar, keszlet, elerheto],
+        (err, result) => {
+            if (err) return res.status(500).json(err);
 
-    res.json({
-        message: "Termék hozzáadva",
-        id: result.lastInsertRowid
-    });
+            res.json({
+                message: "Termék hozzáadva",
+                id: result.insertId
+            });
+        }
+    );
 });
 
-// DELETE - Termék törlése ID alapján
-app.delete("/api/termekek/:id", (req, res) => {
-    const result = db.prepare(
-        "DELETE FROM termekek WHERE id = ?"
-    ).run(req.params.id);
+app.put("/api/termekek/:id", (req, res) => {
+    const { kategoria_id, nev, ar, keszlet, elerheto } = req.body;
 
-    res.json({
-        message: "Termék törölve",
-        toroltSorok: result.changes
-    });
+    db.query(
+        "UPDATE termekek SET kategoria_id=?, nev=?, ar=?, keszlet=?, elerheto=? WHERE id=?",
+        [
+            kategoria_id,
+            nev,
+            ar,
+            keszlet,
+            elerheto,
+            req.params.id
+        ],
+        (err, result) => {
+            if (err) return res.status(500).json(err);
+
+            res.json({
+                message: "Termék módosítva",
+                modositottSorok: result.affectedRows
+            });
+        }
+    );
+});
+
+app.delete("/api/termekek/:id", (req, res) => {
+    db.query(
+        "DELETE FROM termekek WHERE id = ?",
+        [req.params.id],
+        (err, result) => {
+            if (err) return res.status(500).json(err);
+
+            res.json({
+                message: "Termék törölve",
+                toroltSorok: result.affectedRows
+            });
+        }
+    );
+});
+
+app.put("/api/termekek/:id", (req, res) => {
+    const { kategoria_id, nev, ar, keszlet, elerheto } = req.body;
+
+    db.query(
+        `UPDATE termekek
+         SET kategoria_id = ?,
+             nev = ?,
+             ar = ?,
+             keszlet = ?,
+             elerheto = ?
+         WHERE id = ?`,
+        [
+            kategoria_id,
+            nev,
+            ar,
+            keszlet,
+            elerheto,
+            req.params.id
+        ],
+        (err, result) => {
+            if (err) {
+                return res.status(500).json(err);
+            }
+
+            res.json({
+                message: "Termék módosítva",
+                modositottSorok: result.affectedRows
+            });
+        }
+    );
 });
 
 app.listen(3000, () => {
     console.log("Server fut: http://localhost:3000");
 });
-
-//2 insert into, 2 update, 2 delete
